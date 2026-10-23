@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AetherNet • IP-MAC Address Management & ARP/DHCP Simulation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #05080e;
+      --bg-surface: #0a0f19;
+      --bg-card: rgba(14, 21, 35, 0.75);
+      --bg-card-hover: rgba(20, 30, 50, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(0, 223, 162, 0.35);
+      --border-cyan: rgba(0, 188, 235, 0.35);
+      --aurora-teal: #00dfa2;
+      --aurora-cyan: #00bceb;
+      --aurora-coral: #ff9a76;
+      --aurora-amber: #f5a623;
+      --aurora-purple: #a855f7;
+      --text-main: #f8fafc;
+      --text-dim: rgba(255, 255, 255, 0.65);
+      --text-muted: #64748b;
+      --serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+      --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--sans);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Aurora Horizon Glow */
+    .ambient-glow-wrapper {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .aurora-blur-1 {
+      position: absolute;
+      top: 15%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 900px;
+      height: 480px;
+      background: radial-gradient(ellipse 65% 50% at 50% 50%, rgba(0, 223, 162, 0.16) 0%, rgba(0, 188, 235, 0.10) 40%, transparent 75%);
+      filter: blur(60px);
+      opacity: 0.85;
+    }
+
+    .aurora-blur-2 {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 1200px;
+      height: 400px;
+      background: radial-gradient(ellipse 80% 40% at 50% 50%, rgba(0, 223, 162, 0.12) 0%, rgba(0, 140, 220, 0.08) 50%, transparent 80%);
+      filter: blur(80px);
+    }
+
+    /* Subtle Technical Star Grid */
+    .bg-grid {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.55;
+    }
+
+    /* Sticky Navigation Header */
+    nav.top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(6, 10, 18, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      height: 58px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.6) 0%, rgba(0, 223, 162, 0.3) 60%, rgba(0, 188, 235, 0.6) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 14px rgba(0, 223, 162, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .brand-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(0, 223, 162, 0.12);
+      border: 1px solid rgba(0, 223, 162, 0.3);
+      color: var(--aurora-teal);
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-family: var(--mono);
+      text-transform: none;
+    }
+
+    .nav-academic {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    .nav-academic span.evaluator {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 12px;
+      border-radius: 9999px;
+    }
+
+    .nav-academic b { color: #ffffff; font-weight: 600; }
+    .nav-academic span.highlight { color: var(--aurora-teal); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-dim);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .nav-pill:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    .nav-pill.active {
+      background: rgba(0, 223, 162, 0.15);
+      border-color: rgba(0, 223, 162, 0.4);
+      color: var(--aurora-teal);
+    }
+
+    /* =========================================================================
+       HERO SECTION (FAITHFUL TO USER'S REFERENCE IMAGE)
+       ========================================================================= */
+    section.hero-section {
+      position: relative;
+      z-index: 5;
+      padding: 65px 24px 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      min-height: 460px;
+    }
+
+    /* Floating Glass Orbs & Constellation Web */
+    .constellation-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .glass-orb {
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(6, 16, 28, 0.6) 70%, rgba(0, 223, 162, 0.22) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      box-shadow: 
+        0 0 24px rgba(0, 223, 162, 0.22),
+        inset 0 0 14px rgba(255, 255, 255, 0.25),
+        inset -3px -3px 8px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 3;
+      cursor: pointer;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .glass-orb:hover {
+      border-color: var(--aurora-teal);
+      box-shadow: 
+        0 0 32px rgba(0, 223, 162, 0.45),
+        inset 0 0 18px rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-orb svg {
+      width: 22px;
+      height: 22px;
+      stroke: #ffffff;
+      fill: none;
+      stroke-width: 1.8;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
+    }
+
+    /* Orb Positions Matching Reference Image */
+    .orb-top-left { top: 28px; left: 8%; }
+    .orb-top-right { top: 22px; right: 9%; }
+    .orb-mid-left { top: 185px; left: 6%; }
+    .orb-mid-right { top: 195px; right: 7%; }
+
+    .orb-caption {
+      position: absolute;
+      bottom: -22px;
+      font-size: 9px;
+      font-weight: 700;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Hero Typography */
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--aurora-teal);
+      margin-bottom: 22px;
+      z-index: 2;
+    }
+
+    .hero-eyebrow span.pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--aurora-teal);
+      box-shadow: 0 0 8px var(--aurora-teal);
+    }
+
+    h1.hero-title {
+      font-family: var(--serif);
+      font-size: 52px;
+      line-height: 1.15;
+      font-weight: 400;
+      letter-spacing: -0.015em;
+      color: #ffffff;
+      max-width: 860px;
+      margin: 0 auto 18px;
+      z-index: 2;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    h1.hero-title em {
+      font-style: italic;
+      color: #f1f5f9;
+      font-family: var(--serif);
+    }
+
+    p.hero-subtitle {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      max-width: 680px;
+      margin: 0 auto 34px;
+      z-index: 2;
+      font-weight: 400;
+    }
+
+    /* Action Buttons (Matching Gradient Pill & Frosted Pill in Reference) */
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 2;
+      flex-wrap: wrap;
+    }
+
+    .btn-gradient-pill {
+      background: linear-gradient(105deg, #00dfa2 0%, #00bceb 48%, #ff9a76 100%);
+      color: #05101a;
+      border: none;
+      padding: 11px 26px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: var(--sans);
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 
+        0 0 24px rgba(0, 223, 162, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.4);
+      transition: filter 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-gradient-pill:hover {
+      filter: brightness(1.08);
+      box-shadow: 
+        0 0 34px rgba(0, 223, 162, 0.6),
+        0 6px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-frosted-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      color: #ffffff;
+      padding: 11px 24px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition: background 0.2s, border-color 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-frosted-pill:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .sparkle-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    /* Radiant Horizon Arc Beneath Hero */
+    .aurora-horizon-arc {
+      width: 100%;
+      height: 70px;
+      position: relative;
+      margin-top: 25px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .horizon-curve {
+      width: 85%;
+      height: 100%;
+      border-top: 1px solid rgba(0, 223, 162, 0.45);
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      box-shadow: 0 -8px 28px rgba(0, 223, 162, 0.35);
+      background: radial-gradient(ellipse at 50% 0%, rgba(0, 223, 162, 0.22) 0%, rgba(0, 188, 235, 0.12) 40%, transparent 75%);
+    }
+
+    /* =========================================================================
+       "HOW IT WORKS" SECTION (DIRECTLY FROM REFERENCE IMAGE)
+       ========================================================================= */
+    section.how-it-works-section {
+      position: relative;
+      z-index: 5;
+      padding: 50px 28px 60px;
+      max-width: 1220px;
+      margin: 0 auto;
+    }
+
+    .how-header-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 20px;
+      margin-bottom: 35px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .how-header-left h2.section-title {
+      font-family: var(--serif);
+      font-size: 38px;
+      font-weight: 400;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .how-header-right p.section-desc {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--text-dim);
+      max-width: 480px;
+    }
+
+    .how-layout-grid {
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      gap: 36px;
+      align-items: start;
+    }
+
+    /* Left Steps List */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .step-card {
+      background: rgba(14, 21, 35, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .step-card:hover {
+      background: rgba(18, 28, 48, 0.85);
+      border-color: rgba(0, 223, 162, 0.3);
+    }
+
+    .step-card.active {
+      background: rgba(16, 26, 44, 0.95);
+      border-color: var(--aurora-teal);
+      box-shadow: 0 0 20px rgba(0, 223, 162, 0.15);
+    }
+
+    .step-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.05);
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+
+    .step-card.active .step-badge {
+      border-color: var(--aurora-teal);
+      background: rgba(0, 223, 162, 0.2);
+      color: var(--aurora-teal);
+      box-shadow: 0 0 12px rgba(0, 223, 162, 0.35);
+    }
+
+    .step-content h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 5px;
+    }
+
+    .step-content p {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--text-dim);
+    }
+
+    .step-action-tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 10.5px;
+      font-family: var(--mono);
+      color: var(--aurora-teal);
+      background: rgba(0, 223, 162, 0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 223, 162, 0.25);
+    }
+
+    /* Right 3D Isometric Card Stack (Replicating Image Wireframe Stack) */
+    .isometric-preview-box {
+      background: radial-gradient(circle at 50% 40%, rgba(18, 30, 52, 0.7), rgba(8, 13, 24, 0.95));
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      min-height: 380px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      backdrop-filter: blur(12px);
+    }
+
+    .iso-glow-accent {
+      position: absolute;
+      bottom: -60px; right: -60px;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(0, 223, 162, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+      filter: blur(30px);
+    }
+
+    .iso-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+
+    .iso-header span.tag {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--aurora-teal);
+    }
+
+    .iso-header span.status {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    /* Isometric 3D Layer Visual */
+    .iso-stack-container {
+      position: relative;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 700px;
+    }
+
+    .iso-layer {
+      position: absolute;
+      width: 260px;
+      height: 90px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 223, 162, 0.4);
+      background: rgba(10, 22, 38, 0.75);
+      backdrop-filter: blur(10px);
+      box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.6),
+        0 0 15px rgba(0, 223, 162, 0.2);
+      transform: rotateX(55deg) rotateZ(-30deg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 10px 16px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #cbd5e1;
+      transition: transform 0.4s, border-color 0.3s;
+    }
+
+    .iso-layer-3 {
+      top: 15px;
+      z-index: 3;
+      border-color: rgba(0, 223, 162, 0.6);
+      background: rgba(12, 30, 48, 0.85);
+    }
+
+    .iso-layer-2 {
+      top: 60px;
+      z-index: 2;
+      border-color: rgba(0, 188, 235, 0.5);
+      background: rgba(10, 24, 42, 0.75);
+    }
+
+    .iso-layer-1 {
+      top: 105px;
+      z-index: 1;
+      border-color: rgba(168, 85, 247, 0.4);
+      background: rgba(8, 18, 34, 0.65);
+    }
+
+    .iso-layer .layer-title {
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .iso-layer-3 .layer-title { color: var(--aurora-teal); }
+    .iso-layer-2 .layer-title { color: var(--aurora-cyan); }
+    .iso-layer-1 .layer-title { color: var(--aurora-purple); }
+
+    .iso-footer-note {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.45;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* =========================================================================
+       INTERACTIVE NETWORK SIMULATION LAB (THE FUNCTIONAL CORE)
+       ========================================================================= */
+    section.lab-section {
+      position: relative;
+      z-index: 5;
+      padding: 20px 28px 80px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .lab-box {
+      background: rgba(10, 16, 28, 0.88);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    /* Sleek Frosted Control Strip */
+    .lab-toolbar {
+      background: rgba(12, 19, 34, 0.95);
+      border-bottom: 1px solid var(--border-subtle);
+      height: 52px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 12px;
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .ctrl-pill-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 8px;
+    }
+
+    .ctrl-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-family: var(--mono);
+      letter-spacing: 0.5px;
+    }
+
+    select.glass-select, input.glass-input {
+      background: rgba(18, 28, 48, 0.85);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: var(--sans);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select.glass-select:focus, input.glass-input:focus {
+      border-color: var(--aurora-teal);
+      box-shadow: 0 0 8px rgba(0, 223, 162, 0.3);
+    }
+
+    input.glass-input {
+      width: 130px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .btn-transmit {
+      background: linear-gradient(105deg, #00dfa2 0%, #00bceb 100%);
+      color: #05101a;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 14px rgba(0, 223, 162, 0.4);
+      transition: filter 0.2s;
+    }
+
+    .btn-transmit:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-reset {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-reset:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    /* Main Canvas & Inspector Split */
+    .lab-workspace {
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      height: 580px;
+      position: relative;
+    }
+
+    .viewport-box {
+      position: relative;
+      background: radial-gradient(circle at 50% 25%, #0e1728 0%, #070c16 85%);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    svg#topologySvg {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+
+    /* Symmetrical SVG Pod Containers */
+    .pod-boundary {
+      fill: rgba(14, 22, 36, 0.45);
+      stroke: rgba(0, 223, 162, 0.2);
+      stroke-dasharray: 4 4;
+      rx: 12; ry: 12;
+    }
+
+    .pod-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      fill: #64748b;
+      font-family: var(--mono);
+      letter-spacing: 0.5px;
+    }
+
+    /* Cables */
+    .net-link {
+      stroke: #1e293b;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      transition: stroke 0.3s;
+    }
+
+    .trunk-link {
+      stroke: rgba(0, 223, 162, 0.45);
+      stroke-width: 4;
+    }
+
+    /* Device Cards: Stationary on hover, No Jumping/Scaling */
+    .node-group {
+      cursor: pointer;
+    }
+
+    .node-card {
+      fill: rgba(13, 20, 34, 0.88);
+      stroke: rgba(255, 255, 255, 0.12);
+      stroke-width: 1.5;
+      rx: 10; ry: 10;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+      transition: stroke 0.2s, fill 0.2s, filter 0.2s;
+    }
+
+    .node-group:hover .node-card {
+      stroke: var(--aurora-teal);
+      fill: rgba(18, 30, 50, 0.95);
+      filter: drop-shadow(0 0 16px rgba(0, 223, 162, 0.45));
+    }
+
+    .node-group.selected-src .node-card {
+      stroke: var(--aurora-teal);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 20px rgba(0, 223, 162, 0.65));
+    }
+
+    .node-group.selected-dst .node-card {
+      stroke: var(--aurora-coral);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 20px rgba(255, 154, 118, 0.65));
+    }
+
+    .node-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      fill: #ffffff;
+      font-family: var(--sans);
+    }
+
+    .node-meta {
+      font-size: 9px;
+      fill: #94a3b8;
+      font-family: var(--mono);
+    }
+
+    .node-ip {
+      font-size: 10.5px;
+      font-weight: 600;
+      fill: var(--aurora-teal);
+      font-family: var(--mono);
+    }
+
+    .node-mac {
+      font-size: 8.5px;
+      fill: #64748b;
+      font-family: var(--mono);
+    }
+
+    /* Floating Canvas HUD */
+    .canvas-hud {
+      position: absolute;
+      bottom: 96px;
+      left: 16px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(10, 16, 28, 0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 10.5px;
+      color: #cbd5e1;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    }
+
+    .pulse-indicator {
+      width: 7px;
+      height: 7px;
+      background: var(--aurora-teal);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--aurora-teal);
+    }
+
+    /* Terminal Console Drawer */
+    .terminal-drawer {
+      background: #060910;
+      border-top: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      height: 90px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: #94a3b8;
+      line-height: 1.45;
+    }
+
+    .terminal-drawer .prompt { color: var(--aurora-teal); font-weight: 600; }
+    .terminal-drawer .success { color: var(--aurora-teal); }
+    .terminal-drawer .warning { color: var(--aurora-amber); }
+
+    /* Right Sidebar Inspector */
+    .inspector-panel {
+      background: rgba(10, 16, 28, 0.95);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .tabs-header {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(8, 12, 22, 0.9);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 11px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--aurora-teal);
+      border-bottom-color: var(--aurora-teal);
+      background: rgba(0, 223, 162, 0.05);
+    }
+
+    .tab-content {
+      padding: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .detail-card {
+      background: rgba(14, 22, 38, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .detail-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--aurora-teal);
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      font-family: var(--mono);
+      margin-bottom: 3px;
+      gap: 6px;
+    }
+
+    .detail-row span.k { color: #64748b; flex-shrink: 0; }
+    .detail-row span.v { color: #f1f5f9; font-weight: 600; word-break: break-all; }
+
+    /* Tables */
+    .styled-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      font-family: var(--mono);
+    }
+
+    .styled-table th {
+      text-align: left;
+      padding: 6px;
+      background: rgba(14, 22, 38, 0.85);
+      color: #94a3b8;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .styled-table td {
+      padding: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+
+    .badge-static { background: rgba(0, 223, 162, 0.15); color: var(--aurora-teal); }
+    .badge-dhcp { background: rgba(0, 188, 235, 0.15); color: var(--aurora-cyan); }
+    .badge-reserved { background: rgba(245, 166, 35, 0.15); color: var(--aurora-amber); }
+
+    /* Footer */
+    footer.app-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(6, 10, 18, 0.95);
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+      gap: 14px;
+      position: relative;
+      z-index: 5;
+    }
+
+    footer a {
+      color: var(--aurora-teal);
+      text-decoration: none;
+    }
+
+    /* 7 Crore Meme Sound & Celebration Elements */
+    .btn-crore {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 154, 118, 0.2));
+      color: #ffd700;
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+      transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .btn-crore:hover {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 154, 118, 0.35));
+      border-color: #ffd700;
+      box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
+    }
+
+    .btn-crore.muted {
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+
+    /* Full-screen Confetti Canvas Overlay */
+    #confettiCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* 7 Crore Toast Banner (Bottom-Right Celebration) */
+    .crore-banner {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 10000;
+      background: linear-gradient(135deg, rgba(16, 24, 44, 0.96), rgba(8, 12, 22, 0.98));
+      border: 1.5px solid #ffd700;
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 
+        0 0 35px rgba(255, 215, 0, 0.4),
+        0 14px 30px rgba(0, 0, 0, 0.7),
+        inset 0 0 15px rgba(255, 215, 0, 0.15);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      opacity: 0;
+      transform: translateY(60px);
+      transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s ease;
+      pointer-events: none;
+      max-width: 420px;
+    }
+
+    .crore-banner.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .crore-emblem {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff7a1 0%, #ffd700 45%, #b8860b 85%);
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 18px rgba(255, 215, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #3a2200;
+      font-family: var(--sans);
+      flex-shrink: 0;
+      line-height: 1;
+      animation: spinEmblem 4s linear infinite;
+    }
+
+    @keyframes spinEmblem {
+      0% { filter: drop-shadow(0 0 12px rgba(255,215,0,0.6)); }
+      50% { filter: drop-shadow(0 0 24px rgba(255,215,0,0.9)); }
+      100% { filter: drop-shadow(0 0 12px rgba(255,215,0,0.6)); }
+    }
+
+    .crore-emblem .val { font-size: 16px; font-weight: 900; }
+    .crore-emblem .unit { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .crore-text-box {
+      flex: 1;
+    }
+
+    .crore-heading {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #ffd700;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+
+    .crore-quote {
+      font-size: 11px;
+      color: #ffffff;
+      font-style: italic;
+      margin-bottom: 3px;
+    }
+
+    .crore-details {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--aurora-teal);
+    }
+
+    .crore-close-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    .crore-close-btn:hover { color: #ffffff; }
+  </style>
+</head>
+<body>
+
+  <!-- Background Ambient Glow & Star Grid -->
+  <div class="ambient-glow-wrapper">
+    <div class="aurora-blur-1"></div>
+    <div class="aurora-blur-2"></div>
+  </div>
+  <div class="bg-grid"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <div class="brand-icon">✦</div>
+      <div class="brand-title">
+        AetherNet
+        <span class="brand-badge">IP-MAC & ARP/DHCP</span>
+      </div>
+    </div>
+
+    <div class="nav-academic">
+      <span class="evaluator">Evaluator: <b>Prof. Asha Rawat</b></span>
+      <span>Group 12: <b class="highlight">Ananya • Krishna • Siddhant</b></span>
+      <span>MPSTME / NMIMS</span>
+    </div>
+
+    <div class="nav-links">
+      <a href="#simulation" class="nav-pill active">⚡ Live Simulation</a>
+      <a href="#how-it-works" class="nav-pill">✦ How it Works</a>
+      <a href="#database" class="nav-pill" onclick="setTab('db');">🗄️ IP-MAC Database</a>
+    </div>
+  </nav>
+
+  <!-- =========================================================================
+       HERO SECTION (FAITHFUL TO USER'S REFERENCE IMAGE)
+       ========================================================================= -->
+  <section class="hero-section">
+    
+    <!-- SVG Constellation Connecting Lines -->
+    <svg class="constellation-canvas" viewBox="0 0 1200 460" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.4)" />
+          <stop offset="50%" stop-color="rgba(0,223,162,0.6)" />
+          <stop offset="100%" stop-color="rgba(0,188,235,0.2)" />
+        </linearGradient>
+      </defs>
+      <!-- Constellation line from top-left orb to mid-left orb -->
+      <line x1="125" y1="58" x2="100" y2="215" stroke="url(#lineGrad)" stroke-width="1.2" stroke-dasharray="3 3" />
+      <circle cx="125" cy="58" r="3" fill="#ffffff" filter="drop-shadow(0 0 5px #00dfa2)" />
+      <circle cx="100" cy="215" r="3" fill="#ffffff" filter="drop-shadow(0 0 5px #00dfa2)" />
+
+      <!-- Constellation line from top-right orb to mid-right orb -->
+      <line x1="1065" y1="52" x2="1080" y2="225" stroke="url(#lineGrad)" stroke-width="1.2" stroke-dasharray="3 3" />
+      <circle cx="1065" cy="52" r="3" fill="#ffffff" filter="drop-shadow(0 0 5px #00dfa2)" />
+      <circle cx="1080" cy="225" r="3" fill="#ffffff" filter="drop-shadow(0 0 5px #00dfa2)" />
+
+      <!-- Subtle horizon arch segment connecting across -->
+      <path d="M 100 215 Q 600 320 1080 225" fill="none" stroke="rgba(0,223,162,0.25)" stroke-width="1" />
+      <circle cx="280" cy="265" r="2.5" fill="#ffffff" opacity="0.8" />
+      <circle cx="920" cy="265" r="2.5" fill="#ffffff" opacity="0.8" />
+    </svg>
+
+    <!-- Floating 3D Luminous Glass Spheres (Exact layout as reference image) -->
+    <!-- Orb 1: Eye Icon (Deep Packet Inspection / Monitoring) -->
+    <div class="glass-orb orb-top-left" title="Packet Inspection & Monitoring">
+      <svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="orb-caption">Inspection</span>
+    </div>
+
+    <!-- Orb 2: Lightbulb Icon (DHCP DORA Intelligence) -->
+    <div class="glass-orb orb-top-right" title="Automated DHCP Allocation">
+      <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+      <span class="orb-caption">DHCP DORA</span>
+    </div>
+
+    <!-- Orb 3: Folder Icon (SQLite IP-MAC Registry) -->
+    <div class="glass-orb orb-mid-left" title="Central IP-MAC Database">
+      <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M2 10h20"/></svg>
+      <span class="orb-caption">Database</span>
+    </div>
+
+    <!-- Orb 4: Shield Icon (ARP Security & Anti-Spoofing) -->
+    <div class="glass-orb orb-mid-right" title="ARP Defense & Security">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+      <span class="orb-caption">ARP Defense</span>
+    </div>
+
+    <!-- Hero Content -->
+    <div class="hero-eyebrow">
+      <span class="pulse-dot"></span>
+      <span>Computer Networks Project 12 • MPSTME NMIMS</span>
+    </div>
+
+    <h1 class="hero-title">
+      Meet the #1 System in<br>
+      <em>Network Address Intelligence</em>
+    </h1>
+
+    <p class="hero-subtitle">
+      Our architecture delivers precision Layer 2 and Layer 3 orchestration, automated DHCP leases, dynamic ARP resolution, and packet verification that keeps your enterprise campus secure.
+    </p>
+
+    <!-- The 2 Hero Action Buttons from Reference Image -->
+    <div class="hero-actions">
+      <button class="btn-gradient-pill" onclick="scrollToSimulation()">
+        <span>Transmit Packet</span>
+        <span class="sparkle-icon">✦</span>
+      </button>
+
+      <button class="btn-frosted-pill" onclick="scrollToHowItWorks()">
+        <span>How it Works</span>
+        <span class="sparkle-icon">⛶</span>
+      </button>
+    </div>
+
+    <!-- Radiant Horizon Curve Arc Beneath Hero -->
+    <div class="aurora-horizon-arc">
+      <div class="horizon-curve"></div>
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       INTERACTIVE NETWORK SIMULATION LAB (THE FUNCTIONAL CORE)
+       ========================================================================= -->
+  <section class="lab-section" id="simulation">
+    
+    <div class="lab-box">
+      
+      <!-- Frosted Glass Lab Toolbar -->
+      <div class="lab-toolbar">
+        <div class="toolbar-left">
+          
+          <div class="ctrl-pill-group">
+            <span class="ctrl-label">From:</span>
+            <select id="srcSelect" class="glass-select" onchange="onSelectionChanged()">
+              <option value="pc1">PC1 (192.168.10.21)</option>
+              <option value="pc2">PC2 (192.168.10.22)</option>
+              <option value="pc3">PC3 (192.168.10.15)</option>
+              <option value="pc4">PC4 (192.168.10.50)</option>
+              <option value="pc5">PC5 (192.168.20.21)</option>
+              <option value="core">Core-GW (192.168.10.1)</option>
+            </select>
+          </div>
+
+          <div class="ctrl-pill-group">
+            <span class="ctrl-label">To:</span>
+            <select id="dstSelect" class="glass-select" onchange="onSelectionChanged()">
+              <option value="pc3">PC3 (192.168.10.15)</option>
+              <option value="pc1">PC1 (192.168.10.21)</option>
+              <option value="pc2">PC2 (192.168.10.22)</option>
+              <option value="pc4">PC4 (192.168.10.50)</option>
+              <option value="pc5">PC5 (192.168.20.21)</option>
+              <option value="core">Core-GW (192.168.10.1)</option>
+            </select>
+          </div>
+
+          <div class="ctrl-pill-group">
+            <span class="ctrl-label">Protocol:</span>
+            <select id="protoSelect" class="glass-select" onchange="onProtocolChanged()">
+              <option value="ICMP">ICMP Echo (Ping)</option>
+              <option value="ARP">ARP Resolution</option>
+              <option value="DHCP">DHCP Lease (DORA)</option>
+              <option value="RARP">RARP Reservation</option>
+              <option value="CUSTOM">Custom Payload</option>
+            </select>
+          </div>
+
+          <div class="ctrl-pill-group" id="customMsgWrapper" style="display:none;">
+            <input type="text" id="customMsgInput" class="glass-input" placeholder="Payload..." value="Enterprise Data Packet">
+          </div>
+
+          <button class="btn-transmit" onclick="sendCustomMessage()">
+            <span>🚀 Transmit</span>
+          </button>
+        </div>
+
+        <div class="toolbar-right">
+          <div class="ctrl-pill-group">
+            <span class="ctrl-label">Lab Demo:</span>
+            <select id="demoSelect" class="glass-select" onchange="runAutoDemo()">
+              <option value="">-- Choose Evaluation Demo --</option>
+              <option value="arp_intra">1. Intra-Subnet ARP (PC1 ➔ PC3)</option>
+              <option value="arp_inter">2. Gateway ARP / Inter-VLAN (PC1 ➔ PC5)</option>
+              <option value="dhcp_full">3. DHCP DORA 4-Way Handshake</option>
+              <option value="rarp_demo">4. RARP Hardware Reservation (PC4)</option>
+              <option value="garp_demo">5. Gratuitous ARP Conflict Test</option>
+            </select>
+          </div>
+
+          <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
+          <button id="btnCroreToggle" class="btn-crore" onclick="toggleCroreSound()" title="Toggle Amitabh Bachchan 7 Crore Sound">🎙️ 7 Crore: ON</button>
+        </div>
+      </div>
+
+      <!-- Lab Workspace Split -->
+      <div class="lab-workspace">
+        
+        <!-- Viewport Container -->
+        <div class="viewport-box">
+          
+          <!-- Symmetrical Canvas (Viewbox: 0 0 1000 500) -->
+          <svg id="topologySvg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet">
+            
+            <!-- Pod Boundaries (Clean Department Subnet Containers) -->
+            <g id="podBoundaries">
+              <!-- VLAN 10 (Dept-A Pod): Encloses PC1, PC2, PC3, PC4 -->
+              <rect class="pod-boundary" x="15" y="270" width="765" height="205" />
+              <text class="pod-label" x="30" y="295">VLAN 10 • DEPARTMENT-A (192.168.10.0/24) — PORTS Gi1/0/1 - Gi1/0/4</text>
+
+              <!-- VLAN 20 (Dept-B Pod): Encloses PC5 -->
+              <rect class="pod-boundary" x="810" y="270" width="175" height="205" />
+              <text class="pod-label" x="825" y="295">VLAN 20 • DEPT-B — PORT Gi1/0/5</text>
+            </g>
+
+            <!-- Network Cables (Mathematical Symmetry) -->
+            <g id="linksLayer">
+              <!-- Central Trunk Spine: Core-Gateway (500, 65) to Access-Switch (500, 195) -->
+              <line id="link-core-access" class="net-link trunk-link" x1="500" y1="65" x2="500" y2="195" />
+              
+              <!-- Fan-Out from Access-Switch (500, 195) to all 5 PCs at Y=385 -->
+              <line id="link-access-pc1" class="net-link" x1="500" y1="195" x2="100" y2="385" />
+              <line id="link-access-pc2" class="net-link" x1="500" y1="195" x2="300" y2="385" />
+              <line id="link-access-pc3" class="net-link" x1="500" y1="195" x2="500" y2="385" />
+              <line id="link-access-pc4" class="net-link" x1="500" y1="195" x2="700" y2="385" />
+              <line id="link-access-pc5" class="net-link" x1="500" y1="195" x2="900" y2="385" />
+
+              <!-- Center Trunk Label Pill -->
+              <rect x="430" y="120" width="140" height="22" rx="11" fill="#070c16" stroke="rgba(0,223,162,0.4)" stroke-width="1.2" />
+              <text x="500" y="135" text-anchor="middle" font-size="9" font-family="var(--mono)" fill="#00dfa2" font-weight="700">802.1Q TRUNK (VLAN 10,20)</text>
+            </g>
+
+            <!-- Animated Packets Layer -->
+            <g id="packetsLayer"></g>
+
+            <!-- Devices Layer (Sleek Glass Cards: ZERO Jumping, ZERO Text Overflow) -->
+            <g id="nodesLayer">
+              
+              <!-- TIER 1 (Apex): Core-Gateway at Center (500, 65) -->
+              <g id="node-core" class="node-group" transform="translate(500, 65)" onclick="clickNode('core')">
+                <rect class="node-card" x="-115" y="-38" width="230" height="76" />
+                <circle cx="-80" cy="0" r="17" fill="rgba(0, 223, 162, 0.15)" stroke="#00dfa2" stroke-width="1.5" />
+                <text x="-80" y="5" text-anchor="middle" font-size="15">🔀</text>
+                <text class="node-title" x="-52" y="-12">Core-Gateway (L3)</text>
+                <text class="node-meta" x="-52" y="2">Catalyst 3650 • DHCP Server</text>
+                <text class="node-ip" x="-52" y="15">192.168.10.1 / 20.1</text>
+                <text class="node-mac" x="-52" y="27">MAC: 0001.9600.0010</text>
+              </g>
+
+              <!-- TIER 2 (Spine): Access-Switch at Center (500, 195) -->
+              <g id="node-access" class="node-group" transform="translate(500, 195)" onclick="clickNode('access')">
+                <rect class="node-card" x="-110" y="-36" width="220" height="72" />
+                <circle cx="-76" cy="0" r="16" fill="rgba(0, 188, 235, 0.15)" stroke="#00bceb" stroke-width="1.5" />
+                <text x="-76" y="5" text-anchor="middle" font-size="14">⚡</text>
+                <text class="node-title" x="-48" y="-11">Access-Switch (L2)</text>
+                <text class="node-meta" x="-48" y="3">Catalyst 3650 • 802.1Q Trunk</text>
+                <text class="node-meta" x="-48" y="16">Ports Gi1/0/1-5 (VLAN 10/20)</text>
+                <text class="node-mac" x="-48" y="27">MAC: 0001.9600.0030</text>
+              </g>
+
+              <!-- TIER 3 (End Devices): All 5 PCs equidistant at Y=385 -->
+
+              <!-- PC1: (100, 385) -->
+              <g id="node-pc1" class="node-group selected-src" transform="translate(100, 385)" onclick="clickNode('pc1')">
+                <rect class="node-card" x="-73" y="-39" width="146" height="78" />
+                <text x="0" y="-16" text-anchor="middle" font-size="15">💻</text>
+                <text class="node-title" x="0" y="1" text-anchor="middle">PC1-Dynamic</text>
+                <text class="node-ip" x="0" y="15" text-anchor="middle">192.168.10.21</text>
+                <text class="node-mac" x="0" y="28" text-anchor="middle">0002.1664.0010</text>
+              </g>
+
+              <!-- PC2: (300, 385) -->
+              <g id="node-pc2" class="node-group" transform="translate(300, 385)" onclick="clickNode('pc2')">
+                <rect class="node-card" x="-73" y="-39" width="146" height="78" />
+                <text x="0" y="-16" text-anchor="middle" font-size="15">💻</text>
+                <text class="node-title" x="0" y="1" text-anchor="middle">PC2-Dynamic</text>
+                <text class="node-ip" x="0" y="15" text-anchor="middle">192.168.10.22</text>
+                <text class="node-mac" x="0" y="28" text-anchor="middle">0002.1664.0020</text>
+              </g>
+
+              <!-- PC3: Center (500, 385) -->
+              <g id="node-pc3" class="node-group selected-dst" transform="translate(500, 385)" onclick="clickNode('pc3')">
+                <rect class="node-card" x="-73" y="-39" width="146" height="78" />
+                <text x="0" y="-16" text-anchor="middle" font-size="15">🖥️</text>
+                <text class="node-title" x="0" y="1" text-anchor="middle">PC3-Admin</text>
+                <text class="node-ip" x="0" y="15" text-anchor="middle" style="fill:#00dfa2;">192.168.10.15</text>
+                <text class="node-mac" x="0" y="28" text-anchor="middle">0002.1664.0030</text>
+              </g>
+
+              <!-- PC4: (700, 385) -->
+              <g id="node-pc4" class="node-group" transform="translate(700, 385)" onclick="clickNode('pc4')">
+                <rect class="node-card" x="-73" y="-39" width="146" height="78" />
+                <text x="0" y="-16" text-anchor="middle" font-size="15">🖨️</text>
+                <text class="node-title" x="0" y="1" text-anchor="middle">PC4-Reserved</text>
+                <text class="node-ip" x="0" y="15" text-anchor="middle" style="fill:#f5a623;">192.168.10.50</text>
+                <text class="node-mac" x="0" y="28" text-anchor="middle">0002.1664.0040</text>
+              </g>
+
+              <!-- PC5: (900, 385) -->
+              <g id="node-pc5" class="node-group" transform="translate(900, 385)" onclick="clickNode('pc5')">
+                <rect class="node-card" x="-73" y="-39" width="146" height="78" />
+                <text x="0" y="-16" text-anchor="middle" font-size="15">🏢</text>
+                <text class="node-title" x="0" y="1" text-anchor="middle">PC5-DeptB</text>
+                <text class="node-ip" x="0" y="15" text-anchor="middle" style="fill:#a855f7;">192.168.20.21</text>
+                <text class="node-mac" x="0" y="28" text-anchor="middle">0002.1664.0050</text>
+              </g>
+
+            </g>
+          </svg>
+
+          <!-- Status HUD Pill -->
+          <div class="canvas-hud">
+            <span class="pulse-indicator"></span>
+            <span id="hudStatus">System Active. Choose devices or select an evaluation demo from the toolbar.</span>
+          </div>
+
+          <!-- High-Tech Terminal Drawer -->
+          <div class="terminal-drawer" id="termDrawer">
+            <div><span class="prompt">cisco-ios#</span> <span id="termCmd">show ip-mac status</span></div>
+            <div class="success">[+] Network Operational: Core-Gateway (L3) &lt;-- 802.1Q Trunk --&gt; Access-Switch &lt;-- Ports 1-5 --&gt; Hosts.</div>
+            <div class="warning">[*] Ready for packet transmission. Select Source and Destination above.</div>
+          </div>
+        </div>
+
+        <!-- Right Sidebar Inspector -->
+        <div class="inspector-panel" id="database">
+          <div class="tabs-header">
+            <div class="tab-btn active" onclick="setTab('pdu')">PDU Inspector</div>
+            <div class="tab-btn" onclick="setTab('db')">IP-MAC Database</div>
+            <div class="tab-btn" onclick="setTab('arp')">PC1 ARP Cache</div>
+          </div>
+
+          <!-- Tab 1: PDU Inspector -->
+          <div class="tab-content active" id="pane-pdu">
+            <div class="detail-card">
+              <div class="detail-card-title">
+                <span>Protocol Data Unit (PDU)</span>
+                <span id="pduBadge" style="color:var(--aurora-teal);">IDLE</span>
+              </div>
+              <div class="detail-row"><span class="k">Direction:</span> <span class="v" id="pduPath">-</span></div>
+              <div class="detail-row"><span class="k">Operation:</span> <span class="v" id="pduOp">-</span></div>
+              <div class="detail-row"><span class="k">Payload:</span> <span class="v" id="pduPayload">-</span></div>
+            </div>
+
+            <div class="detail-card" style="border-left: 3px solid var(--aurora-purple);">
+              <div class="detail-card-title">Layer 7 • Application / Transport</div>
+              <div class="detail-row"><span class="k">Protocol:</span> <span class="v" id="pduL7Proto">ICMP / Upper</span></div>
+              <div class="detail-row"><span class="k">Port / Type:</span> <span class="v" id="pduL7Port">-</span></div>
+            </div>
+
+            <div class="detail-card" style="border-left: 3px solid var(--aurora-cyan);">
+              <div class="detail-card-title">Layer 3 • Network (IPv4)</div>
+              <div class="detail-row"><span class="k">Source IP:</span> <span class="v" id="pduSrcIp">-</span></div>
+              <div class="detail-row"><span class="k">Destination IP:</span> <span class="v" id="pduDstIp">-</span></div>
+              <div class="detail-row"><span class="k">TTL:</span> <span class="v" id="pduTtl">128</span></div>
+            </div>
+
+            <div class="detail-card" style="border-left: 3px solid var(--aurora-teal);">
+              <div class="detail-card-title">Layer 2 • Data Link (Ethernet II)</div>
+              <div class="detail-row"><span class="k">Source MAC:</span> <span class="v" id="pduSrcMac">-</span></div>
+              <div class="detail-row"><span class="k">Destination MAC:</span> <span class="v" id="pduDstMac">-</span></div>
+              <div class="detail-row"><span class="k">EtherType:</span> <span class="v" id="pduEth">0x0800</span></div>
+            </div>
+
+            <div style="background:rgba(12, 18, 30, 0.8); border:1px solid var(--border-subtle); border-radius:6px; padding:8px 10px; font-size:10px; line-height:1.45;">
+              <span style="color:var(--aurora-teal); font-weight:700;">SWITCH / ROUTER FORWARDING LOGIC:</span>
+              <p id="logicText" style="margin-top:3px; color:#cbd5e1;">Device checks destination MAC against CAM table. If matched, forwards out designated port. If broadcast, floods out all ports in the same VLAN.</p>
+            </div>
+          </div>
+
+          <!-- Tab 2: IP-MAC Database (SQLite) -->
+          <div class="tab-content" id="pane-db">
+            <div style="font-size:11px; font-weight:700; color:var(--aurora-teal); margin-bottom:4px;">Central IP-MAC Mappings (SQLite)</div>
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>MAC Address</th>
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody id="dbTableBody">
+                <tr><td>192.168.10.1</td><td>0001.9600.0010</td><td><span class="status-badge badge-static">Static GW</span></td></tr>
+                <tr><td>192.168.20.1</td><td>0001.9600.0020</td><td><span class="status-badge badge-static">Static GW</span></td></tr>
+                <tr><td>192.168.10.15</td><td>0002.1664.0030</td><td><span class="status-badge badge-static">Static Admin</span></td></tr>
+                <tr><td>192.168.10.50</td><td>0002.1664.0040</td><td><span class="status-badge badge-reserved">Reserved (RARP)</span></td></tr>
+                <tr><td>192.168.10.21</td><td>0002.1664.0010</td><td><span class="status-badge badge-dhcp">Dynamic</span></td></tr>
+                <tr><td>192.168.10.22</td><td>0002.1664.0020</td><td><span class="status-badge badge-dhcp">Dynamic</span></td></tr>
+                <tr><td>192.168.20.21</td><td>0002.1664.0050</td><td><span class="status-badge badge-dhcp">Dynamic</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Tab 3: PC1 ARP Cache -->
+          <div class="tab-content" id="pane-arp">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:11px; font-weight:700; color:var(--aurora-teal);">PC1 In-Memory ARP Cache</span>
+              <button class="btn-reset" style="padding:2px 8px; font-size:10px;" onclick="flushArpCache()">Flush</button>
+            </div>
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Internet Address</th>
+                  <th>Physical (MAC)</th>
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody id="arpCacheBody">
+                <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cache empty (No ARP entries)</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       "HOW IT WORKS" SECTION (MATCHING USER REFERENCE DESIGN)
+       ========================================================================= -->
+  <section class="how-it-works-section" id="how-it-works">
+    
+    <div class="how-header-strip">
+      <div class="how-header-left">
+        <h2 class="section-title">How it works</h2>
+      </div>
+      <div class="how-header-right">
+        <p class="section-desc">Our process is built to deliver end-to-end address management with precision insuring your enterprise campus stays secure and fully routed.</p>
+      </div>
+    </div>
+
+    <div class="how-layout-grid">
+      
+      <!-- Left Numbered Steps -->
+      <div class="steps-list">
+        
+        <!-- Step 1 -->
+        <div class="step-card active" onclick="activateStep(1, 'dhcp_full')">
+          <div class="step-badge">①</div>
+          <div class="step-content">
+            <h3>Assessment & DHCP DORA</h3>
+            <p>Hosts broadcast DHCP Discover over UDP ports 67/68. Core-Gateway allocates dynamic IPv4 parameters, default routers, and lease timers.</p>
+            <span class="step-action-tag">Run Demo 1: DHCP 4-Way Handshake ➔</span>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card" onclick="activateStep(2, 'arp_intra')">
+          <div class="step-badge">②</div>
+          <div class="step-content">
+            <h3>Threat Analysis & Address Resolution (ARP)</h3>
+            <p>Layer 3 IP addresses are mapped to 48-bit physical MAC addresses via broadcast request (FF:FF:FF:FF:FF:FF) and unicast reply to prevent cache poisoning.</p>
+            <span class="step-action-tag">Run Demo 2: Intra-Subnet ARP ➔</span>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card" onclick="activateStep(3, 'arp_inter')">
+          <div class="step-badge">③</div>
+          <div class="step-content">
+            <h3>Planning & Inter-VLAN Routing</h3>
+            <p>Cross-subnet frames cannot bridge Layer 2 boundaries. Hosts ARP for Default Gateway (192.168.10.1); Catalyst 3650 routes across 802.1Q dot1q trunk.</p>
+            <span class="step-action-tag">Run Demo 3: Gateway ARP & Routing ➔</span>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-card" onclick="activateStep(4, 'rarp_demo')">
+          <div class="step-badge">④</div>
+          <div class="step-content">
+            <h3>Hardware Reservation & RARP Enforcement</h3>
+            <p>Diskless endpoints and secure Admin hosts (PC4) map burned-in ROM MAC signatures to fixed IP leases (192.168.10.50), eliminating unauthorized changes.</p>
+            <span class="step-action-tag">Run Demo 4: RARP Reservation ➔</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right 3D Isometric Card Stack Preview -->
+      <div class="isometric-preview-box">
+        <div class="iso-glow-accent"></div>
+        
+        <div class="iso-header">
+          <span class="tag" id="isoTag">ACTIVE PROTOCOL: ICMP / ARP</span>
+          <span class="status" id="isoStatus">Layer 2 / 3 Model</span>
+        </div>
+
+        <!-- 3D Stack -->
+        <div class="iso-stack-container">
+          <!-- Layer 3: Application & Routing -->
+          <div class="iso-layer iso-layer-3">
+            <div class="layer-title">
+              <span>L3 / L7 • IPV4 PAYLOAD</span>
+              <span id="isoL3Badge">192.168.10.21</span>
+            </div>
+            <div>Protocol: ICMP / DHCP DORA</div>
+            <div>Gateway: 192.168.10.1 (SVI 10)</div>
+          </div>
+
+          <!-- Layer 2: Ethernet Framing -->
+          <div class="iso-layer iso-layer-2">
+            <div class="layer-title">
+              <span>L2 • ETHERNET II (802.1Q)</span>
+              <span>0x0800</span>
+            </div>
+            <div>VLAN Tag: 10 (Dept-A Users)</div>
+            <div>MAC: 0002.1664.0010 ➔ Gateway</div>
+          </div>
+
+          <!-- Layer 1: Physical Media -->
+          <div class="iso-layer iso-layer-1">
+            <div class="layer-title">
+              <span>L1 • COPPER / GIGABIT</span>
+              <span>1000 Mbps</span>
+            </div>
+            <div>Media: 1000Base-T Crossover</div>
+            <div>Switchport: Gi1/0/1 - Gi1/0/24</div>
+          </div>
+        </div>
+
+        <div class="iso-footer-note" id="isoNote">
+          <b>Real-Time Verification:</b> Selected protocol encapsulates from application payload down to Layer 2 Ethernet frame before traversing physical switchports.
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div>
+      <b>IP-MAC Address Management & ARP/DHCP Simulation</b> • Course Code: 702AI0C007
+    </div>
+    <div>
+      Evaluator: <b>Prof. Asha Rawat</b> • Team: <b>Ananya, Krishna, Siddhant (Group 12)</b> • MPSTME, NMIMS
+    </div>
+    <div>
+      <a href="javascript:window.scrollTo({top: 0, behavior: 'smooth'});">Back to Top ↑</a>
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       COMPLETE JAVASCRIPT SIMULATION LOGIC (100% PRESERVED & ENHANCED)
+       ========================================================================= -->
+  <script>
+    // Topology Coordinates (Center Spine at X=500, Symmetrical Wings)
+    const NODES = {
+      core:   { id: "core",   x: 500, y: 65,  name: "Core-Gateway", ip: "192.168.10.1", mac: "0001.9600.0010", vlan: 10 },
+      access: { id: "access", x: 500, y: 195, name: "Access-Switch", ip: "-",           mac: "0001.9600.0030", vlan: 10 },
+      pc1:    { id: "pc1",    x: 100, y: 385, name: "PC1",           ip: "192.168.10.21", mac: "0002.1664.0010", vlan: 10 },
+      pc2:    { id: "pc2",    x: 300, y: 385, name: "PC2",           ip: "192.168.10.22", mac: "0002.1664.0020", vlan: 10 },
+      pc3:    { id: "pc3",    x: 500, y: 385, name: "PC3 (Admin)",   ip: "192.168.10.15", mac: "0002.1664.0030", vlan: 10 },
+      pc4:    { id: "pc4",    x: 700, y: 385, name: "PC4 (Resrv)",   ip: "192.168.10.50", mac: "0002.1664.0040", vlan: 10 },
+      pc5:    { id: "pc5",    x: 900, y: 385, name: "PC5 (Dept B)",  ip: "192.168.20.21", mac: "0002.1664.0050", vlan: 20 }
+    };
+
+    let selectedSrc = "pc1";
+    let selectedDst = "pc3";
+    let isTransmitting = false;
+    let pc1ArpCache = [];
+
+    // Audio effects via Web Audio API
+    let audioCtx = null;
+    function playSound(freq, duration = 0.08) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function scrollToSimulation() {
+      document.getElementById('simulation').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function scrollToHowItWorks() {
+      document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Node Click Handlers on Canvas
+    function clickNode(nodeId) {
+      if (nodeId === "access") return;
+      if (selectedSrc === nodeId) return;
+
+      if (!selectedSrc || (selectedSrc && selectedDst)) {
+        selectedSrc = nodeId;
+        selectedDst = null;
+      } else {
+        selectedDst = nodeId;
+      }
+      syncSelectsWithNodes();
+    }
+
+    function syncSelectsWithNodes() {
+      if (selectedSrc) document.getElementById("srcSelect").value = selectedSrc;
+      if (selectedDst) document.getElementById("dstSelect").value = selectedDst;
+      updateNodeHighlights();
+    }
+
+    function onSelectionChanged() {
+      selectedSrc = document.getElementById("srcSelect").value;
+      selectedDst = document.getElementById("dstSelect").value;
+      updateNodeHighlights();
+    }
+
+    function onProtocolChanged() {
+      const proto = document.getElementById("protoSelect").value;
+      document.getElementById("customMsgWrapper").style.display = (proto === "CUSTOM") ? "flex" : "none";
+    }
+
+    function updateNodeHighlights() {
+      document.querySelectorAll(".node-group").forEach(n => {
+        n.classList.remove("selected-src");
+        n.classList.remove("selected-dst");
+      });
+      if (selectedSrc) {
+        const el = document.getElementById(`node-${selectedSrc}`);
+        if (el) el.classList.add("selected-src");
+      }
+      if (selectedDst) {
+        const el = document.getElementById(`node-${selectedDst}`);
+        if (el) el.classList.add("selected-dst");
+      }
+    }
+
+    // =========================================================================
+    // PACKET TRANSMISSION ENGINE
+    // =========================================================================
+    function sendCustomMessage() {
+      if (isTransmitting) return;
+      if (!selectedSrc || !selectedDst) {
+        alert("Please choose both a Source and Destination device.");
+        return;
+      }
+      if (selectedSrc === selectedDst) {
+        alert("Source and Destination cannot be the same device!");
+        return;
+      }
+
+      const src = NODES[selectedSrc];
+      const dst = NODES[selectedDst];
+      const proto = document.getElementById("protoSelect").value;
+      const customText = document.getElementById("customMsgInput").value.trim() || "Enterprise Data";
+
+      isTransmitting = true;
+      clearPackets();
+
+      let msgLabel = proto;
+      let payloadDesc = customText;
+      let ethType = "0x0800";
+
+      if (proto === "ICMP") {
+        msgLabel = "ICMP Echo";
+        payloadDesc = "Echo Request (32 bytes data)";
+      } else if (proto === "ARP") {
+        msgLabel = "ARP Req";
+        payloadDesc = `Who-has ${dst.ip}? Tell ${src.ip}`;
+        ethType = "0x0806";
+      } else if (proto === "DHCP") {
+        msgLabel = "DHCP Discover";
+        payloadDesc = `DHCP Option 53=1 (MAC: ${src.mac})`;
+      } else if (proto === "RARP") {
+        msgLabel = "RARP Query";
+        payloadDesc = `Who is MAC ${src.mac}?`;
+        ethType = "0x8035";
+      }
+
+      logTerminal(`[TRANSMIT] ${src.name} (${src.ip}) ➔ ${dst.name} (${dst.ip}) [${proto}]`);
+
+      const isHostToGateway = (src.id === "core" || dst.id === "core");
+      const isInterSubnet = (!isHostToGateway && src.vlan !== dst.vlan);
+      const isBroadcast = (proto === "ARP" || proto === "DHCP");
+
+      if (isBroadcast) {
+        executeBroadcastTransmission(src, dst, proto, msgLabel, payloadDesc);
+      } else if (isHostToGateway) {
+        executeHostToGatewayTransmission(src, dst, proto, msgLabel, payloadDesc, ethType);
+      } else if (!isInterSubnet) {
+        executeIntraSubnetTransmission(src, dst, proto, msgLabel, payloadDesc, ethType);
+      } else {
+        executeInterSubnetTransmission(src, dst, proto, msgLabel, payloadDesc, ethType);
+      }
+    }
+
+    // 1. Intra-Subnet Transmission (L2 Local Switch Forwarding)
+    function executeIntraSubnetTransmission(src, dst, proto, label, payload, ethType) {
+      updateHud(`Intra-Subnet: Forwarding ${proto} via Access-Switch...`);
+      updatePduInfo(src, dst, label, payload, ethType, "Forwarding frame to local access switch.");
+
+      animateSegment(src, NODES.access, label, "#00dfa2", () => {
+        logTerminal(`[SWITCH] Access-Switch matches ${dst.mac} on CAM table port. Forwarding to ${dst.name}...`);
+        updatePduInfo(src, dst, label, payload, ethType, `Access-Switch matches ${dst.mac} on local access port.`);
+
+        animateSegment(NODES.access, dst, label, "#00dfa2", () => {
+          logTerminal(`[RECEIVED] ${dst.name} received ${proto} payload: "${payload}"`);
+          playSound(880, 0.12);
+          updateHud(`Received on ${dst.name}! Returning reply...`);
+
+          const replyLabel = (proto === "ICMP") ? "ICMP Reply" : "ACK Reply";
+          const replyPayload = (proto === "ICMP") ? "Echo Reply (32 bytes)" : "ACK / Response OK";
+
+          setTimeout(() => {
+            updatePduInfo(dst, src, replyLabel, replyPayload, ethType, `${dst.name} returns reply to sender.`);
+            animateSegment(dst, NODES.access, replyLabel, "#00bceb", () => {
+              animateSegment(NODES.access, src, replyLabel, "#00bceb", () => {
+                logTerminal(`[COMPLETED] ${src.name} received ${replyLabel} from ${dst.name}. Round-trip verified!`);
+                playSound(990, 0.18);
+                updateHud(`Transmission complete. Round-trip verified between ${src.name} and ${dst.name}.`);
+                isTransmitting = false;
+                learnArp(src.id, dst.ip, dst.mac);
+                trigger7CroreCelebration("Intra-Subnet Success", `Round-Trip: ${src.name} ➔ ${dst.name} • 0% Packet Loss`);
+              });
+            });
+          }, 350);
+        });
+      });
+    }
+
+    // 2. Inter-Subnet Transmission (Inter-VLAN L3 Routing Across 802.1Q Trunk)
+    function executeInterSubnetTransmission(src, dst, proto, label, payload, ethType) {
+      logTerminal(`[INTER-VLAN ROUTING] Frame sent up 802.1Q trunk (VLAN ${src.vlan}) to Core-Gateway.`);
+      updateHud(`Inter-subnet packet: Routing via Core-Gateway (VLAN ${src.vlan} ➔ VLAN ${dst.vlan})...`);
+
+      // 1. Host -> Access-Switch
+      animateSegment(src, NODES.access, label, "#00dfa2", () => {
+        // 2. Access-Switch -> Core-Gateway (Up Trunk)
+        animateSegment(NODES.access, NODES.core, label, "#00dfa2", () => {
+          logTerminal(`[CORE-GATEWAY] L3 Router decapsulates frame, routes between SVI VLAN ${src.vlan} and SVI VLAN ${dst.vlan}.`);
+          updatePduInfo(src, dst, label, payload, ethType, `Core-Gateway routes across SVIs: VLAN ${src.vlan} ➔ VLAN ${dst.vlan}.`);
+
+          // 3. Core-Gateway -> Access-Switch (Down Trunk on destination VLAN)
+          animateSegment(NODES.core, NODES.access, label, "#00dfa2", () => {
+            // 4. Access-Switch -> Destination Host
+            animateSegment(NODES.access, dst, label, "#00dfa2", () => {
+              logTerminal(`[RECEIVED] Remote host ${dst.name} received packet: "${payload}"`);
+              playSound(880, 0.12);
+
+              setTimeout(() => {
+                const replyLabel = "ICMP Reply";
+                // Return trip: dst -> Access-Switch -> Core-Gateway -> Access-Switch -> src
+                animateSegment(dst, NODES.access, replyLabel, "#00bceb", () => {
+                  animateSegment(NODES.access, NODES.core, replyLabel, "#00bceb", () => {
+                    animateSegment(NODES.core, NODES.access, replyLabel, "#00bceb", () => {
+                      animateSegment(NODES.access, src, replyLabel, "#00bceb", () => {
+                        logTerminal(`[SUCCESS] Inter-VLAN round trip complete! Layer 3 routing verified.`);
+                        playSound(990, 0.18);
+                        updateHud(`Inter-subnet transmission complete. Packet routed across Layer 3 Gateway.`);
+                        isTransmitting = false;
+                        trigger7CroreCelebration("Inter-VLAN Success", `Routed: ${src.name} (VLAN ${src.vlan}) ➔ ${dst.name} (VLAN ${dst.vlan})`);
+                      });
+                    });
+                  });
+                });
+              }, 350);
+            });
+          });
+        });
+      });
+    }
+
+    // 3. Host-to-Gateway Transmission (DHCP, Default Gateway Pings)
+    function executeHostToGatewayTransmission(src, dst, proto, label, payload, ethType) {
+      updateHud(`Communicating with Core-Gateway...`);
+      const isFromHost = (src.id !== "core");
+
+      if (isFromHost) {
+        animateSegment(src, NODES.access, label, "#00dfa2", () => {
+          animateSegment(NODES.access, NODES.core, label, "#00dfa2", () => {
+            logTerminal(`[CORE-GATEWAY] Core Gateway processed ${proto} from ${src.name}.`);
+            playSound(880, 0.12);
+
+            setTimeout(() => {
+              const replyLabel = (proto === "DHCP") ? "DHCP ACK" : "ICMP Reply";
+              animateSegment(NODES.core, NODES.access, replyLabel, "#00bceb", () => {
+                animateSegment(NODES.access, src, replyLabel, "#00bceb", () => {
+                  logTerminal(`[SUCCESS] ${src.name} received ${replyLabel} from Core-Gateway.`);
+                  playSound(990, 0.18);
+                  updateHud(`Completed! Gateway transaction verified for ${src.name}.`);
+                  isTransmitting = false;
+                  trigger7CroreCelebration("Gateway Transaction Complete", `${proto} with Core-Gateway (192.168.10.1) Verified!`);
+                });
+              });
+            }, 350);
+          });
+        });
+      } else {
+        animateSegment(NODES.core, NODES.access, label, "#00dfa2", () => {
+          animateSegment(NODES.access, dst, label, "#00dfa2", () => {
+            playSound(880, 0.12);
+            isTransmitting = false;
+          });
+        });
+      }
+    }
+
+    // 4. Broadcast Transmission (ARP Request Flooding)
+    function executeBroadcastTransmission(src, dst, proto, label, payload) {
+      logTerminal(`[BROADCAST] ${src.name} generates broadcast frame (Dest MAC: FF:FF:FF:FF:FF:FF).`);
+      updatePduInfo(src, { ip: "255.255.255.255", mac: "FF:FF:FF:FF:FF:FF" }, label, payload, "0x0806", "Broadcast packet flooded by Access-Switch to all active VLAN ports.");
+
+      animateSegment(src, NODES.access, label, "#f5a623", () => {
+        logTerminal(`[SWITCH] Access-Switch flooding broadcast frame out active VLAN ${src.vlan} ports...`);
+
+        // Flood to all hosts in the same VLAN + Core-Gateway
+        let floodTargets = [];
+        if (src.vlan === 10) {
+          floodTargets = [NODES.pc1, NODES.pc2, NODES.pc3, NODES.pc4, NODES.core].filter(n => n.id !== src.id);
+        } else {
+          floodTargets = [NODES.pc5, NODES.core].filter(n => n.id !== src.id);
+        }
+
+        animateMultiSegments(NODES.access, floodTargets, label, "#f5a623", () => {
+          logTerminal(`[TARGET-MATCH] ${dst.name} matches Target IP ${dst.ip}. Non-matching hosts drop packet.`);
+          playSound(800, 0.1);
+
+          setTimeout(() => {
+            const replyLabel = (proto === "ARP") ? "ARP Reply" : "DHCP Offer";
+            const replyPayload = `${dst.ip} is at ${dst.mac}`;
+            updatePduInfo(dst, src, replyLabel, replyPayload, "0x0806", `${dst.name} sends unicast reply directly to ${src.mac}.`);
+
+            const replyFrom = (dst.id === "core") ? NODES.core : dst;
+            animateSegment(replyFrom, NODES.access, replyLabel, "#00dfa2", () => {
+              animateSegment(NODES.access, src, replyLabel, "#00dfa2", () => {
+                logTerminal(`[RESOLVED] ${src.name} learned: ${dst.ip} ➔ ${dst.mac}`);
+                playSound(990, 0.18);
+                learnArp(src.id, dst.ip, dst.mac);
+                updateHud(`Address resolution complete! ${dst.name}'s MAC successfully cached.`);
+                isTransmitting = false;
+                trigger7CroreCelebration("ARP Resolution Complete", `Learned: ${dst.ip} ➔ ${dst.mac} • Cache Updated`);
+              });
+            });
+          }, 380);
+        });
+      });
+    }
+
+    function animateSegment(fromNode, toNode, label, color, onComplete) {
+      playSound(620, 0.05);
+      const svg = document.getElementById("packetsLayer");
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "packet-bubble");
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", "-24");
+      rect.setAttribute("y", "-13");
+      rect.setAttribute("width", "48");
+      rect.setAttribute("height", "26");
+      rect.setAttribute("rx", "6");
+      rect.setAttribute("fill", "#070c16");
+      rect.setAttribute("stroke", color);
+      rect.setAttribute("stroke-width", "2");
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", "0");
+      text.setAttribute("y", "4");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-size", "9.5");
+      text.setAttribute("font-weight", "700");
+      text.setAttribute("fill", color);
+      text.textContent = label;
+
+      g.appendChild(rect);
+      g.appendChild(text);
+      svg.appendChild(g);
+
+      const duration = 750;
+      const startTime = performance.now();
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const p = Math.min(elapsed / duration, 1);
+        const t = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+
+        const curX = fromNode.x + (toNode.x - fromNode.x) * t;
+        const curY = fromNode.y + (toNode.y - fromNode.y) * t;
+        g.setAttribute("transform", `translate(${curX}, ${curY})`);
+
+        if (p < 1) {
+          requestAnimationFrame(step);
+        } else {
+          svg.removeChild(g);
+          if (onComplete) onComplete();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    function animateMultiSegments(fromNode, toNodesList, label, color, onAllComplete) {
+      let done = 0;
+      toNodesList.forEach(toNode => {
+        animateSegment(fromNode, toNode, label, color, () => {
+          done++;
+          if (done === toNodesList.length && onAllComplete) onAllComplete();
+        });
+      });
+    }
+
+    function clearPackets() {
+      document.getElementById("packetsLayer").innerHTML = "";
+    }
+
+    function updateHud(msg) {
+      document.getElementById("hudStatus").textContent = msg;
+    }
+
+    function updatePduInfo(src, dst, op, payload, eth, logic) {
+      document.getElementById("pduBadge").textContent = op;
+      document.getElementById("pduPath").textContent = `${src.name} ➔ ${dst.name || dst.ip}`;
+      document.getElementById("pduOp").textContent = op;
+      document.getElementById("pduPayload").textContent = payload;
+      document.getElementById("pduSrcIp").textContent = src.ip;
+      document.getElementById("pduDstIp").textContent = dst.ip;
+      document.getElementById("pduSrcMac").textContent = src.mac;
+      document.getElementById("pduDstMac").textContent = dst.mac || "FF:FF:FF:FF:FF:FF";
+      document.getElementById("pduEth").textContent = eth;
+      if (logic) document.getElementById("logicText").textContent = logic;
+    }
+
+    function logTerminal(msg) {
+      const drawer = document.getElementById("termDrawer");
+      const div = document.createElement("div");
+      const time = new Date().toLocaleTimeString();
+      div.innerHTML = `<span style="opacity:0.6;">[${time}]</span> ${msg}`;
+      drawer.appendChild(div);
+      drawer.scrollTop = drawer.scrollHeight;
+    }
+
+    function learnArp(hostId, ip, mac) {
+      if (hostId === "pc1") {
+        if (!pc1ArpCache.some(e => e.ip === ip)) {
+          pc1ArpCache.push({ ip, mac, type: "dynamic" });
+          renderArpCache();
+        }
+      }
+    }
+
+    function renderArpCache() {
+      const tbody = document.getElementById("arpCacheBody");
+      tbody.innerHTML = "";
+      if (pc1ArpCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cache empty (No ARP entries)</td></tr>';
+        return;
+      }
+      pc1ArpCache.forEach(e => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${e.ip}</td><td>${e.mac}</td><td>${e.type}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function flushArpCache() {
+      pc1ArpCache = [];
+      renderArpCache();
+      logTerminal("[PC1] ARP cache flushed (arp -d *).");
+    }
+
+    function setTab(tabName) {
+      document.querySelectorAll(".tab-btn").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(p => p.classList.remove("active"));
+      
+      const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.toLowerCase().includes(tabName));
+      if (btn) btn.classList.add("active");
+      
+      const pane = document.getElementById(`pane-${tabName}`);
+      if (pane) pane.classList.add("active");
+    }
+
+    function activateStep(stepNum, demoKey) {
+      document.querySelectorAll('.step-card').forEach((c, idx) => {
+        if (idx === stepNum - 1) c.classList.add('active');
+        else c.classList.remove('active');
+      });
+
+      const titles = [
+        "ACTIVE PROTOCOL: DHCP DORA",
+        "ACTIVE PROTOCOL: INTRA-SUBNET ARP",
+        "ACTIVE PROTOCOL: INTER-VLAN ROUTING",
+        "ACTIVE PROTOCOL: RARP RESERVATION"
+      ];
+      const badges = ["Option 53 = 1", "0x0806 (ARP)", "802.1Q SVI", "MAC Reservation"];
+      
+      document.getElementById('isoTag').textContent = titles[stepNum - 1] || "ACTIVE PROTOCOL";
+      document.getElementById('isoL3Badge').textContent = badges[stepNum - 1] || "Active";
+
+      scrollToSimulation();
+      document.getElementById('demoSelect').value = demoKey;
+      runAutoDemo();
+    }
+
+    function runAutoDemo() {
+      const val = document.getElementById("demoSelect").value;
+      if (!val) return;
+
+      if (val === "arp_intra") {
+        document.getElementById("srcSelect").value = "pc1";
+        document.getElementById("dstSelect").value = "pc3";
+        document.getElementById("protoSelect").value = "ARP";
+      } else if (val === "arp_inter") {
+        document.getElementById("srcSelect").value = "pc1";
+        document.getElementById("dstSelect").value = "pc5";
+        document.getElementById("protoSelect").value = "ICMP";
+      } else if (val === "dhcp_full") {
+        document.getElementById("srcSelect").value = "pc1";
+        document.getElementById("dstSelect").value = "core";
+        document.getElementById("protoSelect").value = "DHCP";
+      } else if (val === "rarp_demo") {
+        document.getElementById("srcSelect").value = "pc4";
+        document.getElementById("dstSelect").value = "core";
+        document.getElementById("protoSelect").value = "RARP";
+      } else if (val === "garp_demo") {
+        document.getElementById("srcSelect").value = "pc1";
+        document.getElementById("dstSelect").value = "pc1";
+        document.getElementById("protoSelect").value = "ARP";
+      }
+      onSelectionChanged();
+      onProtocolChanged();
+      sendCustomMessage();
+      document.getElementById("demoSelect").value = "";
+    }
+
+    function resetAll() {
+      isTransmitting = false;
+      clearPackets();
+      flushArpCache();
+      document.getElementById("srcSelect").value = "pc1";
+      document.getElementById("dstSelect").value = "pc3";
+      document.getElementById("protoSelect").value = "ICMP";
+      onSelectionChanged();
+      onProtocolChanged();
+      updateHud("Ready. Select devices above or click directly on the network nodes.");
+      logTerminal("[SYSTEM] Simulation state reset to default.");
+    }
+
+    window.onload = () => {
+      syncSelectsWithNodes();
+      renderArpCache();
+    };
+
+    // =========================================================================
+    // 7 CRORE AMITABH BACHCHAN CELEBRATION & MEME SFX ENGINE
+    // =========================================================================
+    let croreSoundEnabled = true;
+    let croreAudio = null;
+    let croreHideTimer = null;
+
+    function toggleCroreSound() {
+      croreSoundEnabled = !croreSoundEnabled;
+      const btn = document.getElementById("btnCroreToggle");
+      if (croreSoundEnabled) {
+        btn.classList.remove("muted");
+        btn.textContent = "🎙️ 7 Crore: ON";
+        play7CroreMeme();
+        trigger7CroreCelebration("Test Sound", "7 Crore Meme Audio Activated!");
+      } else {
+        btn.classList.add("muted");
+        btn.textContent = "🔇 7 Crore: OFF";
+        dismissCroreBanner();
+      }
+    }
+
+    function play7CroreMeme() {
+      try {
+        if (!croreAudio) {
+          croreAudio = new Audio("/audio/7_crore.mp3");
+        }
+        croreAudio.currentTime = 0;
+        croreAudio.volume = 1.0;
+        croreAudio.play().catch(e => {
+          console.log("Audio autoplay prevented by browser policy:", e);
+        });
+      } catch (e) {
+        console.error("Audio error:", e);
+      }
+    }
+
+    function trigger7CroreCelebration(title, details) {
+      if (croreSoundEnabled) {
+        play7CroreMeme();
+      }
+
+      // Show Banner
+      const banner = document.getElementById("croreBanner");
+      if (banner) {
+        if (details) document.getElementById("croreDetails").textContent = details;
+        banner.classList.add("show");
+        if (croreHideTimer) clearTimeout(croreHideTimer);
+        croreHideTimer = setTimeout(() => {
+          banner.classList.remove("show");
+        }, 5500);
+      }
+
+      // Launch Confetti Shower
+      launchConfetti();
+    }
+
+    function dismissCroreBanner() {
+      const banner = document.getElementById("croreBanner");
+      if (banner) banner.classList.remove("show");
+      if (croreHideTimer) clearTimeout(croreHideTimer);
+    }
+
+    function launchConfetti() {
+      const canvas = document.getElementById("confettiCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ["#ffd700", "#ff9a76", "#00dfa2", "#00bceb", "#ffffff", "#ff4b72", "#e2b714"];
+
+      for (let i = 0; i < 90; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * -canvas.height * 0.4,
+          w: Math.random() * 9 + 5,
+          h: Math.random() * 6 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: (Math.random() - 0.5) * 5,
+          vy: Math.random() * 4 + 3,
+          rot: Math.random() * 360,
+          rotSpeed: (Math.random() - 0.5) * 8
+        });
+      }
+
+      const startTime = performance.now();
+      const duration = 3200;
+
+      function render(now) {
+        const elapsed = now - startTime;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.rotSpeed;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        });
+
+        if (elapsed < duration) {
+          requestAnimationFrame(render);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      requestAnimationFrame(render);
+    }
+  </script>
+
+  <!-- Confetti Canvas Overlay -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- 7 Crore Amitabh Bachchan Celebration Toast -->
+  <div id="croreBanner" class="crore-banner">
+    <div class="crore-emblem">
+      <span class="val">7</span>
+      <span class="unit">CRORE</span>
+    </div>
+    <div class="crore-text-box">
+      <div class="crore-heading">
+        <span>🎉 7 CRORE! SAAT CRORE! 🎉</span>
+      </div>
+      <div class="crore-quote" id="croreQuote">"Adbhut! Sahi Jawab! Atyant Durlabh Resolution!"</div>
+      <div class="crore-details" id="croreDetails">Verified: Round-Trip Delivery • 0% Packet Loss</div>
+    </div>
+    <button class="crore-close-btn" onclick="dismissCroreBanner()" title="Close">✕</button>
+  </div>
+</body>
+</html>
