@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/audio/:match*", "destination": "/visualizer/audio/:match*" },
+    { "source": "/", "destination": "/visualizer/index.html" },
+    { "source": "/:match*", "destination": "/visualizer/:match*" }
+  ]
+}

@@ -2286,7 +2286,22 @@
     function play7CroreMeme() {
       try {
         if (!croreAudio) {
-          croreAudio = new Audio("/audio/7_crore.mp3");
+          // Resolve audio path flexibly for both root and /visualizer/ subpaths
+          const candidatePaths = [
+            "audio/7_crore.mp3",
+            "/audio/7_crore.mp3",
+            "visualizer/audio/7_crore.mp3",
+            "/visualizer/audio/7_crore.mp3"
+          ];
+          let pathIndex = 0;
+          croreAudio = new Audio(candidatePaths[pathIndex]);
+          croreAudio.onerror = () => {
+            pathIndex++;
+            if (pathIndex < candidatePaths.length) {
+              croreAudio.src = candidatePaths[pathIndex];
+              croreAudio.play().catch(e => {});
+            }
+          };
         }
         croreAudio.currentTime = 0;
         croreAudio.volume = 1.0;
